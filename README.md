@@ -44,6 +44,6 @@ Para essa entrega parcial nós implementamos o basico do algoritmo, então nós 
 
 A partir dessa implementação podemos adicionar cortes horizontais, ou mudando algumas partes da implementação, ou simplesmente rotacionando a imagem em 90 graus.
 
-Ainda sera necessario implementar a remoção de objetos e tecnicas de identificar pixels relevantes e objetos.
+Ainda sera necessario implementar a inserção de linhas e colunas, remoção de objetos e tecnicas de identificar pixels relevantes e objetos. Entretanto tudo segue da base implementada nessa entrega parcial.
 
 Para ver os resultados parciais basta observar o documento "Demonstration Working Algorithm.ipynb"
