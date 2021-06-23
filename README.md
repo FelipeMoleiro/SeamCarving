@@ -1,6 +1,11 @@
 # SeamCarving
 Content-Aware Resizing using Seam Carving Image Processing
 
+# Alunos
+
+Felipe Guilermmo Santuche Moleiro - 10724010
+Mateus Prado Santos - 10851707
+Vinicius Ricardo Carvalho - 10724413
 
 # Objetivo Principal
 
