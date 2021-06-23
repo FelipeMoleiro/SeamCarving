@@ -99,8 +99,6 @@ edge = edgeImg(img)
 
 minEnergyPath = calculateMinEnergyPath(edge)
 
-print(minEnergyPath)
-
 plt.imshow(minEnergyPath,cmap="gray")
 plt.show()
 
