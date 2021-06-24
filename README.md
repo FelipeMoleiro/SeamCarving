@@ -4,7 +4,9 @@ Content-Aware Resizing using Seam Carving Image Processing
 # Alunos
 
 Felipe Guilermmo Santuche Moleiro - 10724010
+
 Mateus Prado Santos - 10851707
+
 Vinicius Ricardo Carvalho - 10724413
 
 # Objetivo Principal
@@ -20,12 +22,17 @@ Outra utilidade desse algoritmo discutido no Paper original é tambem a capacida
 Qualquer imagem pode ser input para esse algoritmo, entretanto as imagens que se darão melhor são as que são compostas majoritariamente por background e com poucos elementos importantes na imagem.
 
 As imagens utilizadas nessa primeira parte do projeto foram obtidas do exemplo do algoritmo existente na wikipedia:
+
     Site: https://en.wikipedia.org/wiki/Seam_carving 
+    
 E tambem a imagem do quadro "A persistencia da Memoria" do pintor Salvador Dali que foi usada de exemplo em video explicando o algoritmo:
+
     Video: https://www.youtube.com/watch?v=ALcohd1q3dk&ab_channel=TheJuliaProgrammingLanguage
+    
     Imagem: https://i.pinimg.com/originals/c6/24/f5/c624f57595292a5ec8a229386be745d6.jpg
 
 As imagens para o projeto final serão imagens interessantes que nosso grupo consiga encontrar. Mas as imagens mais seguras para fazer os testes caso tenhamos dificuldades de encontrar imagens legais, podemos pegar as imagens do Paper original que apresentou esse conceito de Seam Carving.
+
     Paper: https://faculty.idc.ac.il/arik/SCWeb/imret/imret.pdf
 
 Para ver os exemplos em uso basta ver o documento "Demonstration Working Algorithm.ipynb"
