@@ -116,13 +116,18 @@ def archiveName(i):
     str2 = "%03d" % i
     return str1 + str2 + ".png"
 
-def removeNSeams(img,seamNumber):
-    frame = np.zeros(img.shape,dtype=np.uint8)
+def removeNSeams(img,seamNumber,frameShape,horizontal = False):
+    global imgNum
+    frame = np.zeros(frameShape,dtype=np.uint8)
     newImg = img
 
     frame *= 0 
     frame[:newImg.shape[0],:newImg.shape[1],:] = newImg
-    imageio.imsave(archiveName(imgNum),frame)
+
+    if(horizontal):
+        imageio.imsave(archiveName(imgNum),np.rot90(frame,-1))
+    else:
+        imageio.imsave(archiveName(imgNum),frame)
     imgNum += 1
 
     for i in range(0,seamNumber):
@@ -132,15 +137,22 @@ def removeNSeams(img,seamNumber):
         imgRemoved = printMinSeam(newImg,newEP)
         frame *= 0 
         frame[:imgRemoved.shape[0],:imgRemoved.shape[1],:] = imgRemoved
-        imageio.imsave(archiveName(imgNum),frame)
+        if(horizontal):
+            imageio.imsave(archiveName(imgNum),np.rot90(frame,-1))
+        else:
+            imageio.imsave(archiveName(imgNum),frame)
         imgNum += 1
 
         newImg = removeSeam(newImg,newEP)
 
-    frame *= 0 
-    frame[:newImg.shape[0],:newImg.shape[1],:] = newImg
-    imageio.imsave(archiveName(imgNum),frame)
-    imgNum += 1
+        frame *= 0 
+        frame[:newImg.shape[0],:newImg.shape[1],:] = newImg
+        if(horizontal):
+            imageio.imsave(archiveName(imgNum),np.rot90(frame,-1))
+        else:
+            imageio.imsave(archiveName(imgNum),frame)
+        imgNum += 1
+
 
     return newImg
 
@@ -203,7 +215,7 @@ def expandImage(img,duplicatePixels):
 
 def expandImageSaving(img,seamMatrix,seamNum,N):
     global imgNum
-    frame = np.zeros((img.shape[0],img.shape[1]+N,img.shape[2]),dtype=np.uint8)
+    frame = np.zeros((img.shape[0],N,img.shape[2]),dtype=np.uint8)
 
 
     for i in range(1,seamNum):
@@ -269,11 +281,11 @@ def expandImageSaving(img,seamMatrix,seamNum,N):
 
         seamMatrix = newSeamMatrix
 
-    return newImg
+    return img
 
-def insertNseams(img,N):
+def insertNseams(img,N,total):
     global imgNum
-    frame = np.zeros((img.shape[0],img.shape[1]+N,img.shape[2]),dtype=np.uint8)
+    frame = np.zeros((img.shape[0],total,img.shape[2]),dtype=np.uint8)
 
     #saves initial image
     frame[:img.shape[0],:img.shape[1],:] = img
@@ -290,7 +302,7 @@ def insertNseams(img,N):
         print ('inserting seam ',numSeamsInserted+1, ' of ', N, end="\r")
         minEnergyPath = calculateMinEnergyPath(edgeImg(img)+duplicatePixels)
         if(findInsertSeam(img,duplicatePixels,minEnergyPath,seamNum,seamMatrix) == 1):
-            img = expandImageSaving(img,seamMatrix,seamNum,N)
+            img = expandImageSaving(img,seamMatrix,seamNum,total)
             seamNum = 1
             duplicatePixels = np.zeros((img.shape[0],img.shape[1]))
             seamMatrix = np.zeros((img.shape[0],img.shape[1])) 
@@ -307,25 +319,165 @@ def insertNseams(img,N):
             seamNum += 1
             numSeamsInserted += 1
 
-    newImg = expandImageSaving(img,seamMatrix,seamNum,N)
+    img = expandImageSaving(img,seamMatrix,seamNum,total)
     seamNum = 1
-    return newImg
+    return img
+
+@jit
+def removeSeamWithMask(img,minEnergyPath,mask):
+    n = minEnergyPath.shape[0]
+    m = minEnergyPath.shape[1]
+    
+    minPos = 0
+    minVal = minEnergyPath[0][0]
+
+    #find Min Seam
+    for i in range(1,m):
+        if(minEnergyPath[0][i] < minVal):
+            minPos = i
+            minVal = minEnergyPath[0][i]
+
+    newImg = np.zeros((img.shape[0],img.shape[1]-1,img.shape[2]),dtype=np.uint8)
+    newMask = np.zeros((mask.shape[0],mask.shape[1]-1),dtype=np.double)
+
+    newImg[0] = np.concatenate((img[0][0:minPos],img[0][minPos+1:img.shape[1]]))
+    newMask[0] = np.concatenate((mask[0][0:minPos],mask[0][minPos+1:mask.shape[1]]))
+    for i in range(1,n):
+        #find min from three down
+        center = minPos
+        min = minEnergyPath[i][center]
+
+        if(center>0 and minEnergyPath[i][center-1] < min):
+            min = minEnergyPath[i][center-1]
+            minPos = center -1
+
+        if(center<m-1 and minEnergyPath[i][center+1] < min):
+            min = minEnergyPath[i][center+1]
+            minPos = center+1
+
+        newImg[i] = np.concatenate((img[i][0:minPos],img[i][minPos+1:img.shape[1]]))
+        newMask[i] = np.concatenate((mask[i][0:minPos],mask[i][minPos+1:mask.shape[1]]))
+    
+    return newImg,newMask
+
+def removeNSeamsWithMask(img,seamNumber,mask):
+    global imgNum
+    frame = np.zeros(img.shape,dtype=np.uint8)
+    newImg = img
+
+    frame *= 0 
+    frame[:newImg.shape[0],:newImg.shape[1],:] = newImg
+    imageio.imsave(archiveName(imgNum),frame)
+    imgNum += 1
+
+    newMask = mask
+    for i in range(0,seamNumber):
+        #print('removing Seam Number ', i)
+        print ('removing seam ',i+1, ' of ', seamNumber, end="\r")
+        edge = edgeImg(newImg)
+        edge[np.where(newMask == -1)] = -10000
+        edge[np.where(newMask == 1)] = np.inf
+        newEP = calculateMinEnergyPath(edge)
+
+        imgRemoved = printMinSeam(newImg,newEP)
+        frame *= 0 
+        frame[:imgRemoved.shape[0],:imgRemoved.shape[1],:] = imgRemoved
+        imageio.imsave(archiveName(imgNum),frame)
+        imgNum += 1
+
+        newImg,newMask = removeSeamWithMask(newImg,newEP,newMask)
+
+        frame *= 0 
+        frame[:newImg.shape[0],:newImg.shape[1],:] = newImg
+        imageio.imsave(archiveName(imgNum),frame)
+        imgNum += 1
+
+    frame *= 0 
+    frame[:newImg.shape[0],:newImg.shape[1],:] = newImg
+    imageio.imsave(archiveName(imgNum),frame)
+    imgNum += 1
+
+    return newImg,newMask
+
+drawing = False # true if mouse is pressed
+def drawMask(img,size):
+    mask = np.zeros(img.shape[0:2],dtype=np.double)
+    
+    value = -1
+    ix,iy = -1,-1
+    # mouse callback function
+    def draw_circle(event,x,y,flags,param):
+        global ix,iy,drawing,mode
+        if event == cv2.EVENT_LBUTTONDOWN:
+            drawing = True
+            ix,iy = x,y
+        elif event == cv2.EVENT_MOUSEMOVE:
+            if drawing == True:
+                cv2.circle(mask,(x,y),size,value,-1)
+        elif event == cv2.EVENT_LBUTTONUP:
+            drawing = False
+
+    # Create a black image, a window and bind the function to window
+    cv2.namedWindow('image')
+    cv2.setMouseCallback('image',draw_circle)
+    while(1):
+        imgMod = np.copy(img)
+        imgMod[np.where(mask == -1)] = (255,0,0)
+        imgMod[np.where(mask == 1)] = (0,255,0)
+        cv2.imshow('image',cv2.cvtColor(imgMod, cv2.COLOR_RGB2BGR))
+        key = cv2.waitKey(20) & 0xFF
+        if key == ord("q"):
+            break
+        
+        if key == ord("e"):
+            value = 0
+        if key == ord("i"):
+            value = 1
+        if key == ord("d"):
+            value = -1
+            
+        elif key == 27:
+            break
+    cv2.destroyAllWindows()
+    return mask
 
 os.system("mkdir tmpFrames")
 
-'''
-#removal
-img = imageio.imread('imgs/paris.jpg')
 
-numRemoval = 200
-newImg = removeNSeams(img,numRemoval)
+#removal
+img = imageio.imread('imgs/persistenceLowRes.jpg')
+
+
+newImg = removeNSeams(img,100,img.shape,horizontal=False)
+
+
+
 '''
 img = imageio.imread('imgs/lake.jpg')
 
+total = img.shape[1] + 400
 
-newImg = insertNseams(img,50)
+newImg = insertNseams(img,100,total)
+newImg = insertNseams(newImg,100,total)
+newImg = insertNseams(newImg,100,total)
+newImg = insertNseams(newImg,100,total)
+'''
+#ffmpeg -i output.mp4 -vf tpad=stop_mode=clone:stop_duration=2 final.gif
+#ffmpeg -i final.git -filter:v "setpts=0.5*PTS" final.gif
+#ffmpeg -sseof -3 -i final.gif -vsync 0 -q:v 31 -update true out.jpg
 
 
+'''
+
+img = imageio.imread('imgs/ballon.jpg')
+#img = imageio.imread('imgs/PersistenceOfMemory.jpg')
+
+mask = drawMask(img,10)
+
+newImg, newMask = removeNSeamsWithMask(img,300,mask)
+
+#newImg = insertNseams(newImg,60,img.shape[1])
+'''
 
 os.system("ffmpeg -framerate 12 -i tmpFrames/%03d.png output.mp4")
 #os.system("ffmpeg -r 1 -i tmpFrames/%03d.png -vcodec mpeg4 -y movie.mp4")
