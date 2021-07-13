@@ -330,4 +330,4 @@ newImg = insertNseams(img,50)
 os.system("ffmpeg -framerate 12 -i tmpFrames/%03d.png output.mp4")
 #os.system("ffmpeg -r 1 -i tmpFrames/%03d.png -vcodec mpeg4 -y movie.mp4")
 
-#os.system("rm -r tmpFrames")
+os.system("rm -r tmpFrames")
